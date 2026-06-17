@@ -193,7 +193,7 @@ class SeriesSystem:
     def _baseline_R(self, baseline):
         """Reliability vector used for *non-members* of a coalition.
         baseline in {'rmin','nash','rmax'} -- supports robustness analysis of
-        the characteristic-function convention (reviewer concern)."""
+        the characteristic-function convention."""
         if baseline == "rmin":
             return np.array([s.Rmin for s in self.subs], dtype=float)
         if baseline == "rmax":

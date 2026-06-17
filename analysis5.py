@@ -1,15 +1,12 @@
 """
-Round-5 analyses addressing the RESS reviewer's additional points.
-
-(2) Protocol + Pigouvian subsidy on the REAL EPS case (not just synthetic
-    long chains): how much of the Nash-to-social gap is recovered by the
+Protocol + Pigouvian subsidy on the REAL EPS case: how much of the Nash-to-social gap is recovered by the
     leader alone, and by leader + follower subsidy at several intensities.
 
-(4) Simultaneous misreporting: all followers under-report their cost rate
+Simultaneous misreporting: all followers under-report their cost rate
     beta at once (not one at a time), to probe the complete-information
     assumption A3 more severely.
 
-(5) A second, independent case study (a generic five-subsystem series
+A second, independent case study (a generic five-subsystem series
     system with different parameters) to show the method transfers beyond
     the single satellite-EPS instance.
 """
@@ -73,8 +70,7 @@ def simultaneous_misreport(under=0.20):
 # --------------------------------------------------------------------------- #
 def second_case_study():
     """A generic five-subsystem series system with a dominant leader and four
-    heterogeneous followers, parameters chosen independently of the EPS case.
-    Reported as an illustrative transfer test, NOT as real-data."""
+    heterogeneous followers"""
     subs = [
         Subsystem("Dominant unit (L)", 0.030, 0.095, 4.0, 0.90, 0.9995, "leader"),
         Subsystem("Follower A",        0.026, 0.070, 2.2, 0.90, 0.9995),

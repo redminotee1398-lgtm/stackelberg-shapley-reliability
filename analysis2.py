@@ -1,7 +1,4 @@
 """
-Revision-2 analyses: real-data anchoring and the comparisons reviewers asked for.
-
-Real-data basis (all citable):
   * EPS is the single largest driver of spacecraft unreliability: >25% of all
     on-orbit failures, and ~41% of failures after 5 years
     (Kim, Castet & Saleh, RESS 98(1):55-65, 2012; Wertz & Larson, SMAD).
@@ -40,9 +37,7 @@ def satellite_eps_real():
     Stakes pi_i are assigned in proportion to each constituent's *published
     ranking* as a contributor to EPS unreliability (SAO > Battery > ED > SAD),
     using representative shares consistent with the cited multi-state failure
-    analyses. beta_i are kept in the finite small-rate regime (defended in the
-    paper: beta=5 would make one subsystem cost ~e^95, exceeding any real
-    budget by tens of orders of magnitude, so it is the *unrealistic* choice).
+    analyses. beta_i are kept in the finite small-rate regime.
     Reliability bounds reflect mature space-EPS operating ranges."""
     subs = [
         #          name                         alpha   beta    pi    Rmin   Rmax    role

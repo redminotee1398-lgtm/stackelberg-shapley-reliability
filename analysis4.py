@@ -1,7 +1,5 @@
 """
-Round-4 analyses addressing the Minor-Revision asks.
-
-Defect 1 -- connect the cost parameters to data, two ways:
+1 -- connect the cost parameters to data, two ways:
   (1) An explicit, reproducible *recipe* mapping a subsystem's published
       Weibull reliability to the cost primitives (alpha_i, beta_i).
   (2) A wide two-dimensional sensitivity sweep over (alpha-scale, beta-scale)
@@ -9,7 +7,7 @@ Defect 1 -- connect the cost parameters to data, two ways:
       headline numbers (~10% gap closed; leader share ~40%->~50%) are stable,
       not artefacts of one hand-picked calibration.
 
-Defect 2 -- a concrete risk-aversion table (R_sys, % gap closed, contraction).
+2 -- a concrete risk-aversion table (R_sys, % gap closed, contraction).
 
 The Weibull anchor uses the published fact that space-EPS constituents follow
 Weibull reliability with shape ~1 (infant-mortality regime) and that the

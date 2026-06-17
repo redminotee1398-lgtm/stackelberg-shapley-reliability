@@ -1,7 +1,6 @@
 """
-Revision analyses for the Stackelberg-Shapley reliability paper.
+Analyses for the Stackelberg-Shapley reliability paper.
 
-Adds the quantitative studies requested by reviewers:
   A. theta-sensitivity   : how the leader's accountability weight moves the
                            equilibrium (R_sys, R_L, mean follower R, welfare,
                            leader's final allocation).

@@ -1,5 +1,5 @@
 """
-Additional publication-quality figures for the revised paper.
+Additional publication-quality figures.
 Reuses the global style and palette defined in figures.py.
 """
 import numpy as np
@@ -243,8 +243,7 @@ def fig_scale20(sys):
 
 
 def fig_subsidy(sys):
-    """Demonstrated remedy: a Pigouvian follower subsidy recovers the welfare
-    gap across chain lengths, unlike the single-leader lever."""
+    
     import analysis3 as A3
     rem = A3.subsidy_remedy(n_list=(4, 8, 12))
     fig, ax = plt.subplots(figsize=(6.6, 4.3))
@@ -267,7 +266,7 @@ def fig_subsidy(sys):
 
 def fig_sweep(sys):
     """Heatmap: leader's post-transfer share is stable across a wide (alpha,beta)
-    grid -- the allocative conclusion is not a calibration artefact."""
+    grid"""
     import analysis4 as A4
     a_scales = np.array([0.5, 0.7, 1.0, 1.4, 2.0])
     b_scales = np.array([0.5, 0.75, 1.0, 1.5, 2.0])

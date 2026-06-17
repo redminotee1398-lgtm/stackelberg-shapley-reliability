@@ -1,14 +1,11 @@
 """
-Round-3 analyses answering the latest reviewer questions.
-
-  A. Analytical contraction condition (closed form) and its verification.
-  B. Utility-form robustness: the linear utility is the *expected* value of the
+A. Analytical contraction condition (closed form) and its verification.
+B. Utility-form robustness: the linear utility is the *expected* value of the
      threshold (indicator) payoff; a risk-averse (concave) variant is tested.
-  C. A demonstrated remedy for long chains: a Pigouvian follower subsidy that
-     recovers welfare, shown to scale far better than a single leader.
-  D. VCG comparison: efficient but budget-imbalanced (quantified).
-  E. gamma_max sensitivity to the characteristic-function baseline.
-  F. AGREE sensitivity to the complexity weights.
+C. A demonstrated remedy for long chains.
+D. VCG comparison.
+E. gamma_max sensitivity to the characteristic-function baseline.
+F. AGREE sensitivity to the complexity weights.
 """
 import numpy as np
 from scipy.optimize import brentq, minimize_scalar
