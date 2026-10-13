@@ -2,6 +2,7 @@
 Publication-quality figures for the Stackelberg-Shapley reliability paper.
 Each figure is saved to ./figs at 300 dpi.
 """
+import os
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -51,6 +52,7 @@ C = {
 FOLLOW = [C["f1"], C["f2"], C["f3"]]
 THETA, GAMMA = 0.70, 0.20
 FIG = "figs"
+os.makedirs(FIG, exist_ok=True)
 
 
 def _save(fig, name):

@@ -14,9 +14,8 @@
 We map these facts to model primitives, then (A) compare the protocol's
 operating point and allocation against classic reliability-allocation methods
 (Equal, ARINC, AGREE) and the cost-optimal allocation; (B) test robustness to
-the cost *functional form* (exponential vs power-law); (C) quantify the
-manipulation incentive (the protocol is budget-balanced, hence not
-strategy-proof -- we measure how strong the incentive to misreport is);
+the cost *functional form* (exponential vs power-law); (C) report sensitivity of the computed allocation to perturbations of a
+reported cost-rate input; this is not an incentive-compatibility test;
 (D) decompose the contribution of each protocol stage; (E) push scalability to
 n = 20.
 """
@@ -114,7 +113,7 @@ def compare_methods(sys, R_target=0.95):
     rows = []
     for name, R in [("Equal", alloc_equal(sys, R_target)),
                     ("ARINC", alloc_arinc(sys, R_target)),
-                    ("AGREE", alloc_agree(sys, R_target)),
+                    ("Complexity proxy", alloc_agree(sys, R_target)),
                     ("Cost-optimal", alloc_cost_optimal(sys, R_target))]:
         rows.append(dict(name=name, R=R, Rsys=float(np.prod(R)),
                          cost=cost_to_hit(sys, R)))
@@ -147,13 +146,13 @@ def powerlaw_eps():
 
 
 # --------------------------------------------------------------------------- #
-#  C. Manipulation: incentive to misreport cost rate beta_j
+#  C. Reporting-parameter sensitivity: perturb the cost-rate input beta_j
 # --------------------------------------------------------------------------- #
 def manipulation_curve(real_sys, j, gamma=GAMMA, factors=None):
-    """Follower j reports beta_j' = f * beta_j (over/under-statement).  We
-    recompute the Shapley allocation under the *reported* game and record j's
-    post-transfer share, holding everyone else truthful.  A flat/decreasing
-    curve => little incentive to inflate; an increasing curve => manipulable."""
+    """Perturb follower j's cost-rate input beta_j' = f * beta_j and recompute
+    the reported-game allocation.  This is a numerical reporting-parameter
+    sensitivity diagnostic only.  It does not evaluate true utility under a
+    reporting mechanism and therefore is not a strategy-proofness test."""
     if factors is None:
         factors = np.linspace(0.6, 1.6, 11)
     N = set(range(real_sys.n))
@@ -241,11 +240,11 @@ if __name__ == "__main__":
     print(f"  (exponential reference below)")
 
     print("=" * 72)
-    print("C. MANIPULATION INCENTIVE (follower 1 misreports beta)")
+    print("C. REPORTING-PARAMETER SENSITIVITY (follower 1 beta input)")
     f, share = manipulation_curve(sys, 1)
     print(f"  factor : {f}")
     print(f"  share  : {share}")
-    print(f"  truthful share={share[5]:.3f}; max share={share.max():.3f} at f={f[np.argmax(share)]:.2f}")
+    print(f"  baseline allocation={share[5]:.3f}; range=[{share.min():.3f}, {share.max():.3f}]")
 
     print("=" * 72)
     print("D. STAGE DECOMPOSITION (exponential, real case)")

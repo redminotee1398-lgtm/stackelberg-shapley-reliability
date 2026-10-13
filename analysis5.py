@@ -2,7 +2,7 @@
 Protocol + Pigouvian subsidy on the REAL EPS case: how much of the Nash-to-social gap is recovered by the
     leader alone, and by leader + follower subsidy at several intensities.
 
-Simultaneous misreporting: all followers under-report their cost rate
+Simultaneous reported-parameter perturbation: all followers scale their cost rate
     beta at once (not one at a time), to probe the complete-information
     assumption A3 more severely.
 
@@ -21,18 +21,23 @@ THETA, GAMMA = 0.70, 0.20
 #  (2) Protocol + subsidy on the real EPS case
 # --------------------------------------------------------------------------- #
 def eps_protocol_plus_subsidy(s_list=(0.0, 0.25, 0.5, 0.75, 1.0)):
+    """Gross welfare-gap recovery on the real EPS case.
+
+    s=0 is the accountable Stackelberg leader alone.  Positive s values retain
+    that leader and apply the subsidy only to followers.  Subsidy financing and
+    administrative costs are intentionally excluded from the gross engineering
+    welfare metric reported in the manuscript.
+    """
     g = satellite_eps_real()
     Wn = g.welfare(g.solve_nash())
     Wo = g.welfare(g.solve_social())
-    Wstk = g.welfare(g.solve_stackelberg(theta=THETA))
-    leader_alone = (Wstk - Wn) / (Wo - Wn)
     rows = []
     for s in s_list:
-        W = g.welfare(A3.subsidy_equilibrium(g, s))
+        R = A3.stackelberg_with_follower_subsidy(g, float(s), theta=THETA)
+        W = g.welfare(R)
         rows.append((s, (W - Wn) / (Wo - Wn)))
+    leader_alone = rows[0][1]
     return leader_alone, rows
-
-
 # --------------------------------------------------------------------------- #
 #  (4) Simultaneous misreporting of beta by ALL followers
 # --------------------------------------------------------------------------- #
@@ -99,7 +104,7 @@ if __name__ == "__main__":
     la, rows = eps_protocol_plus_subsidy()
     print(f"  leader alone closes: {100*la:.1f}%")
     for s, rec in rows:
-        tag = "  (= Nash)" if s == 0 else ("  (= social opt)" if s == 1 else "")
+        tag = "  (= accountable leader only)" if s == 0 else ""
         print(f"  + follower subsidy s={s:.2f}: closes {100*rec:5.1f}% of the gap{tag}")
 
     print("=" * 68)

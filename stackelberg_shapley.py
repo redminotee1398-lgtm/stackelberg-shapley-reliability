@@ -164,9 +164,12 @@ class SeriesSystem:
     # ---- contraction diagnostic ------------------------------------------ #
     def br_jacobian_spectral_radius(self, R=None, eps=1e-6):
         """Spectral radius of the followers' best-response Jacobian at R.
-        rho < 1  <=>  the best-response map is a local contraction, so the
-        follower Nash equilibrium is unique and best-response iteration
-        converges geometrically (verifies the hypothesis of Prop. 1)."""
+
+        rho < 1 is a *local* linear-convergence diagnostic around R.  It is not,
+        by itself, a global uniqueness certificate.  The manuscript's global
+        sufficient uniqueness certificate is the boxwise sup-norm contraction
+        bound implemented in analysis3.contraction_bound().
+        """
         if R is None:
             R = self.solve_nash()
         R = np.array(R, dtype=float)
@@ -326,12 +329,13 @@ def satellite_eps_real():
 
 
 if __name__ == "__main__":
-    sys = satellite_eps()
-    GAMMA = 0.35
-    THETA = 0.6
+    # Final manuscript case study and working protocol settings.
+    sys = satellite_eps_real()
+    GAMMA = 0.20
+    THETA = 0.70
 
     print("=" * 74)
-    print(" STACKELBERG-SHAPLEY RELIABILITY PROTOCOL -- Satellite EPS case study")
+    print(" STACKELBERG-SHAPLEY RELIABILITY PROTOCOL -- data-informed satellite EPS")
     print("=" * 74)
 
     R_nash = sys.solve_nash()
@@ -339,33 +343,21 @@ if __name__ == "__main__":
     R_soc = sys.solve_social()
 
     def row(tag, R):
-        print(f"{tag:14s} | R_sys={sys.R_sys(R):.5f} | W={sys.welfare(R):7.4f} | "
-              + " ".join(f"{r:.4f}" for r in R))
+        print(f"{tag:14s} | R_sys={sys.R_sys(R):.7f} | W={sys.welfare(R):.7f} | "
+              + " ".join(f"{r:.6f}" for r in R))
 
     print("\n-- Reliability regimes -------------------------------------------")
-    print(f"{'regime':14s} |   R_sys   |    W    | per-subsystem R_i")
     row("Nash", R_nash)
     row("Stackelberg", R_stk)
     row("Social opt.", R_soc)
-
-    paoR = sys.R_sys(R_stk) - sys.R_sys(R_nash)
-    poa = sys.welfare(R_soc) / sys.welfare(R_nash)
-    print(f"\nStrategic advantage  Delta_strategic = {paoR:.5f}"
-          f"  ({100*paoR/sys.R_sys(R_nash):.2f}% reliability gain)")
-    print(f"Price of Anarchy (W_social/W_nash)   = {poa:.4f}")
+    gap = (sys.welfare(R_stk) - sys.welfare(R_nash)) / (sys.welfare(R_soc) - sys.welfare(R_nash))
+    print(f"Welfare gap closed by accountable leader = {100*gap:.3f}%")
+    print(f"Price of Anarchy W_social/W_nash = {sys.welfare(R_soc)/sys.welfare(R_nash):.6f}")
 
     m = sys.metrics(GAMMA, theta=THETA)
-    print("\n-- Cooperative allocation (gamma = %.2f) --------------------------" % GAMMA)
-    print(f"{'subsystem':22s} | Shapley phi_i | Stk-Shapley | share%")
-    for i, s in enumerate(sys.subs):
-        print(f"{s.name:22s} | {m['phi'][i]:11.4f}   | {m['phi_stk'][i]:9.4f}  "
-              f" | {100*m['phi_stk'][i]/m['phi_stk'].sum():5.1f}")
-    print(f"{'TOTAL':22s} | {m['phi'].sum():11.4f}   | {m['phi_stk'].sum():9.4f}")
-
-    print("\n-- Three strategic metrics ---------------------------------------")
-    print(f"Delta_strategic (system advantage) = {m['delta_strategic']:.5f}")
-    print(f"kappa_L         (leader criticality)= {m['kappa_L']:.5f}")
-    print(f"psi_L           (leader entitlement)= {m['psi_L']:.5f}")
-    sh0 = m['phi'][sys.L] / m['phi'].sum()
-    sh1 = m['phi_stk'][sys.L] / m['phi_stk'].sum()
-    print(f"Leader share: {100*sh0:.1f}%  ->  {100*sh1:.1f}%  (Shapley -> Stk-Shapley)")
+    print("\n-- Cooperative allocation ----------------------------------------")
+    for i, sub in enumerate(sys.subs):
+        print(f"{sub.name:28s} | Shapley={m['phi'][i]:.7f} | premium allocation={m['phi_stk'][i]:.7f}")
+    print(f"kappa_L={m['kappa_L']:.7f}")
+    print(f"leader share: {100*m['phi'][sys.L]/m['phi'].sum():.3f}% -> "
+          f"{100*m['phi_stk'][sys.L]/m['phi_stk'].sum():.3f}%")

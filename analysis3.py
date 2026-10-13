@@ -29,37 +29,46 @@ def d2cost(s, R):
 #  A. Analytical contraction bound
 # --------------------------------------------------------------------------- #
 def contraction_bound(sys, R=None):
-    """Closed-form sufficient condition for the follower best-response map to be
-    a sup-norm contraction.  For follower j the best response solves
-    pi_j * R_sys/R_j = C_j'(R_j); implicit differentiation gives
+    """Global sufficient sup-norm contraction bound on the follower box.
 
-        dBR_j/dR_k = pi_j * R_sys /(R_j R_k C_j''(R_j))   (k != j),
+    For follower j, the interior best response satisfies
+        C_j'(R_j) = pi_j * prod_{m != j} R_m.
+    Hence, for follower k != j,
+        |d BR_j / d R_k| = pi_j * prod_{m != j,k} R_m / C_j''(R_j).
 
-    so the row sum Lambda_j = sum_{k in F, k!=j} dBR_j/dR_k, and
-    Lambda := max_j Lambda_j < 1  ==>  contraction (hence unique equilibrium).
-    Returns (Lambda, per-follower rows) and the numerical spectral radius."""
-    if R is None:
-        R = sys.solve_nash()
-    R = np.asarray(R, float)
-    Rsys = np.prod(R)
+    The boxwise upper bound uses every remaining reliability at its upper bound
+    and the minimum cost curvature over follower j's interval.  For the present
+    exponential cost, C_j'' is increasing over the operating interval, so its
+    minimum occurs at R_j^min.  Lambda_box < 1 is a global sufficient condition
+    for contraction of the follower best-response map on the stated box.
+
+    The returned rho is the Jacobian spectral radius at the computed Nash point
+    and is reported only as a local numerical diagnostic.
+    """
     F = sys.F
     rows = {}
     for j in F:
-        s = sys.subs[j]
-        c2 = d2cost(s, R[j])
+        sj = sys.subs[j]
+        # Conservative minimum curvature on [Rmin,Rmax].  A small grid check is
+        # retained so this remains valid if a future calibration changes shape.
+        grid = np.linspace(sj.Rmin, min(sj.Rmax, 0.999999), 4001)
+        c2_min = float(np.min([d2cost(sj, r) for r in grid]))
         lam = 0.0
         for k in F:
             if k == j:
                 continue
-            lam += s.pi * Rsys / (R[j] * R[k] * c2)
-        rows[j] = lam
-    Lambda = max(rows.values())
-    rho, _ = sys.br_jacobian_spectral_radius(R)
-    return Lambda, rows, rho
-
-
+            prod_upper = 1.0
+            for m, sm in enumerate(sys.subs):
+                if m not in (j, k):
+                    prod_upper *= min(sm.Rmax, 0.999999)
+            lam += sj.pi * prod_upper / c2_min
+        rows[j] = float(lam)
+    Lambda_box = max(rows.values())
+    R_local = sys.solve_nash() if R is None else np.asarray(R, float)
+    rho, _ = sys.br_jacobian_spectral_radius(R_local)
+    return float(Lambda_box), rows, float(rho)
 # --------------------------------------------------------------------------- #
-#  B. Utility-form robustness (risk-averse / concave benefit)
+#  B. Concave reliability-valuation robustness
 # --------------------------------------------------------------------------- #
 class RiskAverseSystem(SeriesSystem):
     """u_i = pi_i * w(R_sys) - C_i, with w concave (CRRA-style w=R_sys^eta,
@@ -116,38 +125,89 @@ def risk_aversion_scan(etas=(1.0, 0.75, 0.5)):
 
 
 # --------------------------------------------------------------------------- #
-#  C. Follower-subsidy remedy (Pigouvian) for long chains
+#  C. Follower-only subsidy combined with the accountable Stackelberg leader
 # --------------------------------------------------------------------------- #
-def subsidy_equilibrium(sys, s_sub):
-    """Nash among ALL teams when each team i receives a per-unit subsidy that
-    augments its effective stake from pi_i to pi_i + s_sub*(Pi_tot - pi_i),
-    i.e. a Pigouvian transfer internalising a fraction s_sub of the externality
-    it imposes on others.  s_sub=0 -> Nash; s_sub=1 -> social optimum."""
-    Pi = sum(x.pi for x in sys.subs)
-    eff = [x.pi + s_sub * (Pi - x.pi) for x in sys.subs]
-    R = np.array([x.Rmin for x in sys.subs], float)
-    for _ in range(200):
-        Rprev = R.copy()
-        for i, x in enumerate(sys.subs):
-            others = np.prod([R[k] for k in range(sys.n) if k != i])
+def _best_response_with_effective_stake(sys, i, R, effective_stake):
+    """Best response of player i when its private reliability stake is modified."""
+    x = sys.subs[i]
+    others = np.prod([R[k] for k in range(sys.n) if k != i])
+    target = effective_stake * others
+    lo, hi = x.Rmin, min(x.Rmax, 0.999999)
+    if x.dcost(lo) >= target:
+        return lo
+    if x.dcost(hi) <= target:
+        return hi
+    return brentq(lambda Ri: x.dcost(Ri) - target, lo, hi, xtol=1e-10)
 
-            def foc(Ri):
-                return eff[i] * others - x.dcost(Ri)
-            lo, hi = x.Rmin, min(x.Rmax, 0.999999)
-            if foc(lo) <= 0:
-                R[i] = lo
-            elif foc(hi) >= 0:
-                R[i] = hi
-            else:
-                R[i] = brentq(foc, lo, hi, xtol=1e-10)
-        if np.max(np.abs(R - Rprev)) < 1e-9:
+
+def follower_only_subsidy_nash(sys, s_sub):
+    """Simultaneous Nash outcome with a subsidy applied to followers only.
+
+    This helper is retained for diagnostics.  The leader keeps its original
+    stake pi_L.  Each follower j acts as if its private stake were
+        pi_j + s_sub * (Pi_tot - pi_j).
+    Consequently s_sub=1 does *not* generally equal the social optimum because
+    the leader's externality is not fully internalized.
+    """
+    Pi = sum(x.pi for x in sys.subs)
+    eff = [x.pi for x in sys.subs]
+    for j in sys.F:
+        eff[j] = sys.subs[j].pi + s_sub * (Pi - sys.subs[j].pi)
+    R = np.array([x.Rmin for x in sys.subs], float)
+    for _ in range(500):
+        prev = R.copy()
+        for i in range(sys.n):
+            R[i] = _best_response_with_effective_stake(sys, i, R, eff[i])
+        if np.max(np.abs(R - prev)) < 1e-9:
             break
     return R
 
 
+def subsidized_followers_given_leader(sys, RL, s_sub):
+    """Follower Nash response to a fixed leader reliability under follower-only subsidy."""
+    Pi = sum(x.pi for x in sys.subs)
+    eff = [x.pi for x in sys.subs]
+    for j in sys.F:
+        eff[j] = sys.subs[j].pi + s_sub * (Pi - sys.subs[j].pi)
+    R = np.array([x.Rmin for x in sys.subs], float)
+    R[sys.L] = RL
+    for _ in range(500):
+        prev = R.copy()
+        R[sys.L] = RL
+        for j in sys.F:
+            R[j] = _best_response_with_effective_stake(sys, j, R, eff[j])
+        R[sys.L] = RL
+        if np.max(np.abs(R - prev)) < 1e-9:
+            break
+    return R
+
+
+def stackelberg_with_follower_subsidy(sys, s_sub, theta=THETA):
+    """Accountable leader anticipating follower Nash responses under follower-only subsidy.
+
+    The subsidy changes follower private incentives only.  Welfare and the
+    leader's objective are evaluated with the original model primitives; no
+    subsidy payment is added to welfare.  Reported recovery is therefore gross
+    engineering-side recovery before financing/administrative costs.
+    """
+    lo = sys.subs[sys.L].Rmin
+    hi = min(sys.subs[sys.L].Rmax, 0.999999)
+
+    def leader_obj(RL):
+        R = subsidized_followers_given_leader(sys, RL, s_sub)
+        return theta * sys.welfare(R) + (1.0 - theta) * sys.utility(sys.L, R)
+
+    res = minimize_scalar(lambda RL: -leader_obj(RL), bounds=(lo, hi), method="bounded",
+                          options={"xatol": 1e-8})
+    return subsidized_followers_given_leader(sys, res.x, s_sub)
+
+
 def subsidy_remedy(n_list=(4, 8, 12), s_grid=None):
-    """For each chain length, how much of the Nash->social welfare gap a uniform
-    follower subsidy recovers, vs the single-leader Stackelberg lever."""
+    """Gross Nash-to-social welfare-gap recovery from leader + follower-only subsidy.
+
+    The synthetic chain construction is unchanged from the original experiment.
+    At s_sub=0 each curve equals the accountable Stackelberg-leader outcome.
+    """
     if s_grid is None:
         s_grid = np.linspace(0, 1, 11)
     rng = np.random.default_rng(7)
@@ -156,19 +216,18 @@ def subsidy_remedy(n_list=(4, 8, 12), s_grid=None):
         subs = [Subsystem("L", 0.024, 0.088, 3.2, 0.90, 0.9995, "leader")]
         for k in range(n - 1):
             subs.append(Subsystem(f"F{k}", 0.028, 0.072,
-                                   float(1.0 + 0.6 * rng.random()), 0.90, 0.9995))
+                                  float(1.0 + 0.6 * rng.random()), 0.90, 0.9995))
         g = SeriesSystem(subs, leader_index=0)
-        Wn, Wo = g.welfare(g.solve_nash()), g.welfare(g.solve_social())
-        Wstk = g.welfare(g.solve_stackelberg(theta=THETA))
-        rec_sub = []
+        Wn = g.welfare(g.solve_nash())
+        Wo = g.welfare(g.solve_social())
+        rec = []
         for s_sub in s_grid:
-            W = g.welfare(subsidy_equilibrium(g, s_sub))
-            rec_sub.append((W - Wn) / (Wo - Wn))
-        out[n] = dict(s_grid=s_grid, rec_sub=np.array(rec_sub),
-                      rec_leader=(Wstk - Wn) / (Wo - Wn))
+            R = stackelberg_with_follower_subsidy(g, float(s_sub), theta=THETA)
+            W = g.welfare(R)
+            rec.append((W - Wn) / (Wo - Wn))
+        rec = np.asarray(rec)
+        out[n] = dict(s_grid=np.asarray(s_grid), rec_sub=rec, rec_leader=float(rec[0]))
     return out
-
-
 # --------------------------------------------------------------------------- #
 #  D. VCG comparison: efficient but budget-imbalanced
 # --------------------------------------------------------------------------- #
@@ -233,18 +292,18 @@ if __name__ == "__main__":
     print(f"   per-follower rows : {[round(v,4) for v in rows.values()]}")
 
     print("=" * 72)
-    print("B. UTILITY-FORM ROBUSTNESS (risk aversion eta)")
+    print("B. CONCAVE RELIABILITY-VALUATION ROBUSTNESS (eta)")
     for r in risk_aversion_scan():
         print(f"   eta={r['eta']:.2f}  Rsys: N={r['Rn']:.4f} S={r['Rs']:.4f} O={r['Ro']:.4f}"
               f"  PoA={r['poa']:.3f}  closed={100*r['closed']:.1f}%")
 
     print("=" * 72)
-    print("C. FOLLOWER-SUBSIDY REMEDY")
+    print("C. ACCOUNTABLE LEADER + FOLLOWER-ONLY SUBSIDY")
     rem = subsidy_remedy()
     for n, d in rem.items():
         half = d['rec_sub'][len(d['s_grid'])//2]
         print(f"   n={n:2d}  leader-only recovers {100*d['rec_leader']:5.1f}%  |"
-              f"  subsidy s=0.5 recovers {100*half:5.1f}%  |  s=1.0 -> {100*d['rec_sub'][-1]:.0f}%")
+              f"  leader+subsidy s=0.5 recovers {100*half:5.1f}%  |  s=1.0 -> {100*d['rec_sub'][-1]:.0f}%")
 
     print("=" * 72)
     print("D. VCG BUDGET IMBALANCE")

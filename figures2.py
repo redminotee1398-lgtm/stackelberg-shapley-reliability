@@ -17,6 +17,7 @@ def fig_theta(sys):
     t = A.theta_sweep(sys, thetas=np.linspace(0, 1, 21))
     Rsoc = sys.R_sys(sys.solve_social())
     Rnash = sys.R_sys(sys.solve_nash())
+    residual_pct = 100.0 * (Rsoc - t["Rsys"][-1]) / (Rsoc - Rnash)
     fig, ax = plt.subplots(figsize=(6.4, 4.3))
     ax.plot(t["theta"], t["Rsys"], color=C["leader"], lw=2.6,
             marker="o", ms=4, label=r"system reliability $R_{\mathrm{sys}}^*$")
@@ -25,26 +26,22 @@ def fig_theta(sys):
     ax.plot(t["theta"], t["RFmean"], color=C["soc"], lw=2.0, ls="--",
             marker="^", ms=3.5, label=r"mean follower reliability $\bar R_F^*$")
     ax.axhline(Rsoc, color="#444", ls=":", lw=1.4)
-    ax.text(0.02, Rsoc + 0.004, "social-optimum $R_{\\mathrm{sys}}=0.848$",
+    ax.text(0.02, Rsoc + 0.004, f"social-optimum $R_{{\\mathrm{{sys}}}}={Rsoc:.3f}$",
             fontsize=8.6, color="#444", ha="left")
     ax.axhline(Rnash, color=C["nash"], ls=":", lw=1.2)
-    ax.text(0.02, Rnash - 0.009, "Nash $R_{\\mathrm{sys}}=0.772$",
+    ax.text(0.02, Rnash - 0.009, f"Nash $R_{{\\mathrm{{sys}}}}={Rnash:.3f}$",
             fontsize=8.6, color=C["nash"], ha="left")
-    # residual-gap annotation at theta=1
     ax.annotate("", xy=(0.965, Rsoc), xytext=(0.965, t["Rsys"][-1]),
                 arrowprops=dict(arrowstyle="<->", color="#444", lw=1.1))
     ax.text(0.95, (Rsoc + t["Rsys"][-1]) / 2,
-            "residual\ngap (92%)", fontsize=8.0, color="#444",
-            ha="right", va="center")
+            f"residual\nreliability gap ({residual_pct:.1f}%)", fontsize=8.0,
+            color="#444", ha="right", va="center")
     ax.set_xlabel(r"leader system-accountability weight $\theta$")
     ax.set_ylabel("reliability at equilibrium")
     ax.set_title("Leader accountability helps, but cannot close the gap alone")
-    ax.legend(fontsize=8.8, loc="center", bbox_to_anchor=(0.42, 0.34))
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0.76, 0.97)
+    ax.legend(fontsize=8.2, loc="center", bbox_to_anchor=(0.43, 0.38))
+    ax.set_xlim(0, 1); ax.set_ylim(0.76, 0.97)
     _save(fig, "fig_theta")
-
-
 # --------------------------------------------------------------------------- #
 #  FIG -- gamma with individual-rationality range
 # --------------------------------------------------------------------------- #
@@ -198,8 +195,7 @@ def fig_methods(sys):
 
 
 def fig_manip(sys):
-    """Manipulation incentive: a follower's post-transfer share as it misreports
-    its cost rate beta. Not flat => the rule is not strategy-proof."""
+    """Sensitivity of computed allocations to a reported cost-rate input."""
     fig, ax = plt.subplots(figsize=(6.4, 4.2))
     cols = FOLLOW
     for idx, j in enumerate(sys.F):
@@ -207,14 +203,12 @@ def fig_manip(sys):
         ax.plot(f, share, color=cols[idx], lw=2.0, marker="o", ms=3.5,
                 label=sys.subs[j].name)
     ax.axvline(1.0, color="#333", ls="--", lw=1.2)
-    ax.text(1.02, ax.get_ylim()[0] + 0.02, "truthful", fontsize=8.4, color="#333")
-    ax.set_xlabel(r"reported cost rate $\beta_j'/\beta_j$ (misreport factor)")
-    ax.set_ylabel("follower's allocated share")
-    ax.set_title("The transfer is budget-balanced, hence not strategy-proof")
+    ax.text(1.02, ax.get_ylim()[0] + 0.02, "baseline input", fontsize=8.4, color="#333")
+    ax.set_xlabel(r"reported cost-rate multiplier $\beta_j'/\beta_j$")
+    ax.set_ylabel("computed follower allocation")
+    ax.set_title("Allocation sensitivity to the reported cost-rate input")
     ax.legend(fontsize=8.4, loc="upper right")
     _save(fig, "fig_manip")
-
-
 def fig_scale20(sys):
     rows = A2.scalability(ns=range(2, 21))
     ns = [r["n"] for r in rows]
@@ -243,27 +237,20 @@ def fig_scale20(sys):
 
 
 def fig_subsidy(sys):
-    
     import analysis3 as A3
     rem = A3.subsidy_remedy(n_list=(4, 8, 12))
     fig, ax = plt.subplots(figsize=(6.6, 4.3))
     cols = {4: C["leader"], 8: C["stk"], 12: C["soc"]}
     for n, d in rem.items():
         ax.plot(d["s_grid"], 100 * d["rec_sub"], color=cols[n], lw=2.4,
-                marker="o", ms=3.5, label=f"subsidy, $n={n}$")
-        ax.scatter([0], [100 * d["rec_leader"]], color=cols[n], marker="x",
-                   s=70, zorder=5)
-    ax.scatter([], [], color="#333", marker="x", s=70,
-               label="single leader (at $s=0$)")
-    ax.set_xlabel(r"follower subsidy intensity $s$ (0 = Nash, 1 = full Pigouvian)")
-    ax.set_ylabel("Nash$\\to$social welfare gap closed (%)")
-    ax.set_title("A follower subsidy scales where a single leader cannot")
+                marker="o", ms=3.5, label=f"leader + follower subsidy, $n={n}$")
+    ax.set_xlabel(r"follower subsidy intensity $s$ (0 = leader only; 1 = full follower subsidy)")
+    ax.set_ylabel("Nash$\to$social welfare gap closed (%)")
+    ax.set_title("Follower-side subsidies complement the accountable leader")
     ax.axhline(100, color="#999", ls=":", lw=1.0)
-    ax.legend(fontsize=8.6, loc="center right")
+    ax.legend(fontsize=8.2, loc="lower right")
     ax.set_ylim(0, 108)
     _save(fig, "fig_subsidy")
-
-
 def fig_sweep(sys):
     """Heatmap: leader's post-transfer share is stable across a wide (alpha,beta)
     grid"""
@@ -300,4 +287,6 @@ if __name__ == "__main__":
     fig_methods(sys)
     fig_manip(sys)
     fig_scale20(sys)
-    print("all revision figures generated.")
+    fig_subsidy(sys)
+    fig_sweep(sys)
+    print("all computational revision figures generated.")

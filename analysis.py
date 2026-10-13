@@ -128,10 +128,10 @@ if __name__ == "__main__":
     np.set_printoptions(precision=4, suppress=True)
 
     print("=" * 70)
-    print("E. CONTRACTION DIAGNOSTIC")
+    print("E. LOCAL JACOBIAN DIAGNOSTIC")
     rho, J = sys.br_jacobian_spectral_radius()
     print(f"   spectral radius of follower BR Jacobian at Nash = {rho:.4f}")
-    print(f"   contraction (rho<1) verified: {rho < 1}")
+    print(f"   local rho<1: {rho < 1}  (not a global uniqueness proof)")
 
     print("=" * 70)
     print("B. GAMMA INDIVIDUAL-RATIONALITY RANGE")

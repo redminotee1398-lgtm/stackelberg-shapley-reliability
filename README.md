@@ -1,94 +1,107 @@
-# Stackelberg–Shapley Protocol for Reliability Allocation
+# Stackelberg-Shapley protocol for decentralized reliability allocation
 
-Reproducibility code for the paper
+Python implementation and analysis scripts associated with the manuscript
+**"A Stackelberg-Shapley Protocol for Individually-Rational Reliability Allocation in the Conceptual Design of Series Systems."**
 
-> **A Stackelberg–Shapley Protocol for Individually-Rational Reliability Allocation in the Conceptual Design of Series Systems**
+## Scope of the repository
 
-This repository contains the complete Python implementation, analysis modules, and figure-generation scripts. Every table and figure in the paper can be reproduced from a single entry point.
+The code implements the public-good reliability model, simultaneous Nash and
+accountability-weighted Stackelberg regimes, the induced characteristic-function
+game and Shapley allocation, the participation-constrained leader premium,
+robustness/calibration experiments, fixed-target allocation comparisons,
+synthetic scalability tests, and the corrected **follower-only subsidy combined
+with the accountable Stackelberg leader**.
 
----
+The satellite Electrical Power System (EPS) illustration is **data-informed**:
+published reliability evidence motivates the subsystem decomposition and the
+choice of Solar-Array Operating as the leader.  The normalized stake and
+reliability-hardening cost parameters remain modelling inputs rather than a
+fully empirical economic calibration.
 
-## What the paper does
+## Important interpretation notes
 
-In the conceptual design of a complex **series system** (e.g. a satellite Electrical Power System), each subsystem is built by a separate, self-interested team that controls its own reliability budget yet shares in the reliability of the integrated product. Because the series reliability
-
-```
-R_sys = ∏ R_i
-```
-
-benefits every team but is paid for locally, it behaves as a **public good**: decentralised choices cause free-riding and under-provision relative to the system optimum.
-
-The paper introduces a four-stage **Stackelberg–Shapley protocol**:
-
-1. A pivotal subsystem (the **leader**) moves first under a system-accountability weight `θ`.
-2. The remaining teams reach a **Nash equilibrium** in a public-goods game.
-3. The **Shapley value** of an induced cooperative characteristic function is computed.
-4. A `γ`-parameterised, **budget-balanced transfer** rewards the leader in proportion to its measured criticality `κ_L = v(N) − v(N\{L})`, bounded by follower individual rationality.
-
-The case study is anchored in published on-orbit failure statistics for the satellite EPS (Castet & Saleh 2009; Kim, Castet & Saleh 2012), with cost parameters set by a transparent **Weibull-informed calibration**.
-
-**Headline, transparently reported findings:** a single leader closes only ≈10% of the Nash-to-social welfare gap; the rule is individually rational but *not* strategy-proof; the protocol's principal value is **allocative** (it lifts the pivotal team's fair share from 40.4% to 49.7% while keeping every team individually rational and the budget exactly balanced); and a Pigouvian follower subsidy recovers 80–95% of the gap in long chains, complementing the protocol.
-
----
+- The Jacobian spectral radius `rho ~= 0.044` is a **local convergence diagnostic**.
+  The manuscript's global sufficient uniqueness certificate is the conservative
+  boxwise sup-norm contraction bound `Lambda_box ~= 0.411` implemented in
+  `analysis3.py`.
+- The cost-rate perturbation experiment is a **reporting-parameter sensitivity
+  analysis**, not a strategy-proofness test.
+- The fixed-target "AGREE" calculation available in the legacy code does not
+  contain all mission-time and importance inputs required for a full AGREE
+  implementation; it is therefore reported as a **complexity-weighted proxy**.
+- Subsidy results are **gross engineering welfare recovery before financing and
+  administrative costs**.  The corrected experiment subsidizes followers only
+  and retains the accountable Stackelberg leader.
 
 ## Repository structure
 
-| File | Contents |
-|------|----------|
-| `stackelberg_shapley.py` | Core model: `Subsystem`, `SeriesSystem`, Nash / Stackelberg / social solvers, Shapley value, best-response Jacobian, the real satellite-EPS instance |
-| `analysis.py` | θ-sweep, γ individual-rationality range, β-robustness, baseline robustness, allocation baselines |
-| `analysis2.py` | Classic allocation methods (Equal, ARINC, AGREE, cost-optimal) and functional-form (power-law) robustness |
-| `analysis3.py` | Analytical contraction bound, AGREE complexity-weight sensitivity, VCG-style budget deficit, risk-aversion, Pigouvian follower-subsidy remedy |
-| `analysis4.py` | Weibull-informed cost calibration and the wide (α, β) sensitivity sweep |
-| `analysis5.py` | Protocol + subsidy on the real EPS case, simultaneous misreporting, and a second independent case study |
-| `figures.py`, `figures2.py` | All 18 figures (300 dpi) |
+| File | Main purpose |
+|---|---|
+| `stackelberg_shapley.py` | Core model, Nash/Stackelberg/social solvers, characteristic function, Shapley value, EPS case |
+| `analysis.py` | Accountability sweep, participation range, calibration/baseline sensitivity, allocation comparisons |
+| `analysis2.py` | Fixed-target allocation comparisons, power-law robustness, reporting-input sensitivity, scalability |
+| `analysis3.py` | Global contraction bound, concave valuation, follower-only subsidy, marginal-contribution budget diagnostic, baseline sensitivity |
+| `analysis4.py` | Weibull-informed calibration and wide cost-parameter sweep |
+| `analysis5.py` | Real-EPS leader+subsidy table, joint input perturbation, second synthetic case |
+| `figures.py`, `figures2.py` | Computational figure-generation scripts |
+| `verify_results.py` | Numerical regression checks for the headline manuscript values |
 
----
+## Environment
 
-## Reproducing the results
-
-Requires Python 3.10+ with `numpy`, `scipy`, and `matplotlib`.
+Python 3.10+ with:
 
 ```bash
-# install dependencies
 pip install numpy scipy matplotlib
+```
 
-# core numerical results
-python stackelberg_shapley.py     # baseline EPS instance and regimes
-python analysis.py                # theta, gamma-IR, robustness
-python analysis2.py               # classic methods, functional-form robustness
-python analysis3.py               # contraction, VCG, risk aversion, subsidy
-python analysis4.py               # Weibull calibration + (alpha,beta) sweep
-python analysis5.py               # protocol+subsidy on EPS, joint misreport, 2nd case
+## Running the analyses
 
-# regenerate all figures
+```bash
+python stackelberg_shapley.py
+python analysis.py
+python analysis2.py
+python analysis3.py
+python analysis4.py
+python analysis5.py
+python verify_results.py
+
+# computational figures
 python figures.py
 python figures2.py
 ```
 
-Each script prints the numbers that appear in the corresponding tables of the paper; figures are written as PNGs.
+Figure files are written to `./figs`; the directory is created automatically.
 
----
+## Headline numerical checks for the EPS illustration
 
-## Key results at a glance (satellite-EPS case)
+| Quantity | Verified value |
+|---|---:|
+| Nash system reliability | 0.7722847 |
+| Accountable Stackelberg system reliability (`theta=0.70`) | 0.7815708 |
+| Social-optimum system reliability | 0.8480909 |
+| Nash welfare | 5.6263815 |
+| Stackelberg welfare | 5.6565236 |
+| Social-optimum welfare | 5.9321853 |
+| Welfare gap closed by leader alone | 9.8567% |
+| Local follower-BR Jacobian spectral radius | 0.0443 |
+| Global boxwise contraction bound | 0.4105 |
+| Leader criticality (`Rmin` projection) | 2.75014 |
+| Leader share, Shapley -> premium allocation (`gamma=0.20`) | 40.43% -> 49.70% |
+| `gamma_max`, `Rmin` projection | 0.24548 |
+| `gamma_max`, Nash projection | 0.08005 |
+| Positive common premium under `Rmax` projection | none |
+| Leader + follower-only subsidy, `s=0.25` | 71.30% gross gap recovery |
+| Leader + follower-only subsidy, `s=0.50` | 90.70% gross gap recovery |
+| Leader + follower-only subsidy, `s=0.75` | 97.84% gross gap recovery |
+| Leader + follower-only subsidy, `s=1.00` | 99.56% gross gap recovery |
 
-| Quantity | Value |
-|----------|-------|
-| Nash system reliability | 0.772 |
-| Social-optimum system reliability | 0.848 |
-| Price of anarchy | 1.054 |
-| Best-response contraction radius ρ | 0.044 |
-| Leader criticality κ_L | 2.750 |
-| Gap closed by leader alone | 9.9% |
-| Gap closed by leader + subsidy (s = 0.5) | 89.5% |
-| Leader fair share: plain Shapley → Stackelberg–Shapley | 40.4% → 49.7% |
+## Data/code statement
 
----
+The repository contains the Python source code used for the numerical analyses
+reported in the manuscript.  Numerical reproducibility verifies the
+implementation of the stated model; it does not by itself validate the modelling
+assumptions or turn normalized parameters into measured economic data.
 
 ## Citation
 
-If you use this code, please cite the paper (full bibliographic details to be added on publication).
-
-## License
-
-Released under the [MIT License](LICENSE).
+Please cite the manuscript; full bibliographic details can be added after publication.
